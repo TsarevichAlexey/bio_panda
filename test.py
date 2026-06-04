@@ -15,16 +15,24 @@ for x in p.glob('*.txt'):
 			#print(list(filter (lambda n: n is not '', re.split("[()',\s]",f))))
 			s = pd.Series (list(filter (lambda n: n is not '', re.split("[()',\s]",f))), index = ["id","Name", 'Interface', 'MAC', 'data', 'time'])
 			
-			s = s.drop(labels=["id"])
-			#dt['fio'].str.split(pat=r"[()',\s]",regex=True, expand=True)
+			if s['MAC'] in dt["MAC"].values:
+				#print(dt[dt['MAC'] == s["MAC"]].index[0].tolist())
+				numD = dt[dt['MAC'] == s["MAC"]].index[0].tolist()
+				dtS = dt.loc[ numD, 'data']
+				sd = s["data"]
+				dt.loc[numD, 'data'] = f"{dtS} {sd}"
+				print(dtS)
+			else:
+				s = s.drop(labels=["id"])
+				#dt['fio'].str.split(pat=r"[()',\s]",regex=True, expand=True)
 
-			#print(0,dt)
+				#print(0,dt)
+				
 
-			dt = pd.concat([dt, s.to_frame().T],ignore_index = True)
+				dt = pd.concat([dt, s.to_frame().T],ignore_index = True)
 			#print (dt)
 
-print(dt)
-dt.set_index("MAC")
+#dt=dt.set_index("MAC")
 print(dt)
 			#break
 			#f.replace()
