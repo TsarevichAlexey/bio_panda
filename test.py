@@ -2,7 +2,14 @@ import pandas as pd
 import re
 
 from pathlib import Path
+from sqlalchemy import create_engine
+
+import os
+from dotenv import load_dotenv
 print(123)
+
+# def sql(dt:pd.DataFrame, bd) :
+load_dotenv()
 
 dt = pd.DataFrame(columns = ["Name", 'Interface', 'MAC', 'data', 'time'])
 #dt.set_index('id')
@@ -11,7 +18,7 @@ for x in p.glob('*.txt'):
 	# print (x)
 	with open (x, "r+") as file:
 		for f in file:
-			print(x)
+			# print(x)
 			if f != "\n":
 				#dt.insert(f, None, None, None)
 				#print(list(filter (lambda n: n is not '', re.split("[()',\s]",f))))
@@ -20,12 +27,13 @@ for x in p.glob('*.txt'):
 				if s['MAC'] in dt["MAC"].values:
 					#print (1, s)
 					#print(dt[dt['MAC'] == s["MAC"]].index[0].tolist())
-					numD = dt[dt['MAC'] == s["MAC"]].index[0].tolist()
+					numD = dt[dt['MAC'] == s["MAC"]].index[0]#.tolist()
+					#print(numD)
 					if len(dt.loc[ numD, 'data'].split()) <= 10:
 						dtS = dt.loc[ numD, 'data']
 						sd = s["data"]
 						dt.loc[numD, 'data'] = f"{dtS}\n{sd}"
-						print(dtS)
+						# print(dtS)
 				else:
 					#print (2, s)
 					s = s.drop(labels=["id"])
@@ -37,7 +45,8 @@ for x in p.glob('*.txt'):
 					dt = pd.concat([dt, s.to_frame().T],ignore_index = True)
 				#print (dt)
 
-#dt=dt.set_index("MAC")
+dt=dt.set_index("MAC")
 print(dt)
-			#break
-			#f.replace()
+
+dt.to_csv(r'test.csv')
+
