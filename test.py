@@ -27,7 +27,7 @@ for x in p.glob('*.txt'):
 				if s[2] in diki.keys():
 					tmpS = diki[s[2]][-1].split()
 					if len(tmpS) <= 16 and s[2] not in tmpS:
-						diki[s[2]][-1] +=  " " + s[4]
+						diki[s[2]][-1] +=  "\n" + s[4]
 					"""
 					elif s[5] not in tmps :
 						diki[s[2]][-2] +=  " " + s[5]
