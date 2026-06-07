@@ -41,40 +41,36 @@ with Session as session:
 	"""
 dt = pd.DataFrame(columns = ["Vlan", 'Interface', 'MAC', 'Name', 'data','time'])
 #dt.set_index('id')
+diki = {}
+pattern = re.compile(r'[\(\'\),]')
 p = Path('.')
 for x in p.glob('*.txt'):
 	with open (x, "r+") as file:
 		time = re.search(r'_\d\d\-\d\d',str(x))
 		time = str(time[0])[1:]
-		print(time)
 		for f in file:
 			#print(f)
 			if f != "\n":
 				#dt.insert(f, None, None, None)
-				#print(list(filter (lambda n: n is not '', re.split("[()',\s]",f))))
-				s = pd.Series (list(filter (lambda n: n != '', re.split("[(''),]\s",f))), index = ["Vlan", 'Interface', 'MAC', 'Name', 'data'])
+				#print(list((filter (lambda n: n != ' ' and n !='', pattern.split(f.strip())))))
+				s = pd.Series (list((filter (lambda n: n != ' ' and n !='', pattern.split(f.strip())))), index = ["Vlan", 'Interface', 'MAC', 'Name', 'data'])
+
 				s['time'] = time
-				if s['MAC'] in dt["MAC"].values:
-					#print (1, s)
-					#print(dt[dt['MAC'] == s["MAC"]].index[0].tolist())
-					numD = dt[dt['MAC'] == s["MAC"]].index[0]#.tolist()
-					#print(numD)
-					if len(dt.loc[ numD, 'data'].split()) <= 10:
-						dtS = dt.loc[ numD, 'data']
-						sd = s["data"]
-						dt.loc[numD, 'data'] = f"{dtS}{sd}"
-						# print(dtS)
+				if s['MAC'] in diki.keys():
+					
+					#numD = dt[dt['MAC'] == s["MAC"]].index[0]#.tolist()
+					if len(diki[s['MAC']][-1].split()) <= 16:
+						diki[s['MAC']][-1] +=  " " + s['data']
 				else:
 					#print (2, s)
 					#dt['fio'].str.split(pat=r"[()',\s]",regex=True, expand=True)
 
 					#print(0,dt)
-					
-
-					dt = pd.concat([dt, s.to_frame().T],ignore_index = True)
-				#print (dt)
-
-dt=dt.set_index("MAC")
+					diki[s['MAC']] = [s['Vlan'],s['Interface'], s['Name'],time, s['data']]
+				
+				#diki[s['MAC']][-1] = "\n".join(diki[s['MAC']][-1])
+dt = pd.DataFrame.from_dict(diki,orient="index",columns=["Vlan", 'Interface', 'Name', 'time','data'])
+#dt=dt.set_index("MAC")
 print(dt)
 
 # dt.to_csv(r'test.csv')
