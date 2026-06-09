@@ -1,33 +1,39 @@
-import pandas as pd
 import re
 
 from pathlib import Path
 
-
 import sqlite3
-from dotenv import load_dotenv
+
+from datetime import datetime
 print(123)
 
-load_dotenv()
-
-dt = pd.DataFrame(columns = ["Vlan", 'Interface', 'MAC', 'Name', 'data','time'])
 diki = {}
-pattern = re.compile(r'[\(\'\),]')
+pattern = re.compile(r"\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)\s*(.*)")
 p = Path('.')
 for x in p.glob('*.txt'):
 	with open (x, "r") as file:
-		print (x)
 		time = re.search(r'_\d\d\-\d\d',str(x))
 		time = str(time[0])[1:]
 		for f in file:
 			if f != "\n":
-				s = list((filter (lambda n: n != ' ' and n !='', pattern.split(f.strip()))))
+				s = list((filter (lambda n: n != ' ' and n !='' and n!="(" and n!=")", pattern.split(f.strip()))))
 
 				s.append(time)
 				if s[2] in diki.keys():
+					
 					tmpS = diki[s[2]][-1].split()
-					if len(tmpS) <= 16 and s[2] not in tmpS:
-						diki[s[2]][-1] +=  "\n" + s[4]
+					if s[4] not in tmpS:
+						print(f)
+						print(s)
+						print(tmpS)
+						print (2, s[4])
+						print()
+						tmpS.append(s[4])
+						tmpS = sorted(tmpS, reverse=True)[:10]
+						diki[s[2]][-1] = " ".join(tmpS)
+					if s[1] not in diki[s[2]][1].split():
+						diki[s[2]][1] = diki[s[2]][1] + " " + s[1]
+					
 					"""
 					elif s[5] not in tmps :
 						diki[s[2]][-2] +=  " " + s[5]
@@ -35,11 +41,6 @@ for x in p.glob('*.txt'):
 				else:
 					diki[s[2]] = [s[0],s[1], s[3],s[5], s[4]]
 				
-dt = pd.DataFrame.from_dict(diki,orient="index",columns=["Vlan", 'Interface', 'Name', 'time','data'])
-
-#print(dt)
-
-num = len(dt['Vlan'])
 con = sqlite3.connect("Mac.db")
 
 cursor = con.cursor()
@@ -55,13 +56,13 @@ cursor.execute('''
 			   vlan VARCHAR(50),
 			   interface VARCHAR(20),
 			   name VARCHAR(200),
-			   data DATE,
-			   time VARCHAR(5)
+			   time VARCHAR(5),
+			   data VARCHAR(100)
 			   )
 			   ''')
 
-record = dt.reset_index().values.tolist()
-query = "INSERT OR REPLACE INTO mac_addresses(mac,vlan,interface,name,data,time) VALUES (?,?, ?,?, ?, ?)"
+record = [[mac, vals[0], vals[1], vals[2], vals[3], vals[4]] for mac, vals in diki.items()]
+query = "INSERT OR REPLACE INTO mac_addresses(mac,vlan,interface,name,time, data) VALUES (?,?, ?,?, ?, ?)"
 cursor.executemany(query,record)
 
 con.commit()
