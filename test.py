@@ -104,4 +104,5 @@ def mac_db():
 	con.commit()
 	con.close()
 	
-mac_db()
+if __name__ == "__main__":
+	mac_db()
