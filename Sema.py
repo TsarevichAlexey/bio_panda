@@ -1,7 +1,10 @@
 import re 
 import sqlite3 
 
+from test import *
 
+if (input("Update db (y/n)?").lower) == 'y' :
+	mac_db()
 pattern = re.compile(r"^[0-9a-z]{1,12}$")
 mac = re.fullmatch(pattern, str(input()))
 if mac:

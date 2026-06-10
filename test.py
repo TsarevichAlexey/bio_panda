@@ -36,70 +36,72 @@ def fileDB (x, time):
 					diki[s[2]] = [s[0],s[1], s[3],s[5], s[4]]
 
 		return diki
+def mac_db():
+	con = sqlite3.connect("Mac.db")
 
-con = sqlite3.connect("Mac.db")
+	cursor = con.cursor()
 
-cursor = con.cursor()
+	cursor.execute("PRAGMA synchronous = OFF;")
+	cursor.execute("PRAGMA journal_mode = WAL;")
+	#Выделение оперативки
+	cursor.execute("PRAGMA cache_size =-500000;")
+	cursor.execute("PRAGMA locking_mode = EXCLUSIVE;")
 
-cursor.execute("PRAGMA synchronous = OFF;")
-cursor.execute("PRAGMA journal_mode = WAL;")
-#Выделение оперативки
-cursor.execute("PRAGMA cache_size =-500000;")
-cursor.execute("PRAGMA locking_mode = EXCLUSIVE;")
+	diki = {}
+	pattern = re.compile(r"\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)\s*(.*)")
+	p = Path('.')
 
-diki = {}
-pattern = re.compile(r"\('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)\s*(.*)")
-p = Path('.')
+	cursor.execute("""CREATE TABLE IF NOT EXISTS names(
+					name VARCHAR(20) UNIQUE)""")
 
-cursor.execute("""CREATE TABLE IF NOT EXISTS names(
-				name VARCHAR(20) UNIQUE)""")
+	cursor.execute('''
+				CREATE TABLE IF NOT EXISTS mac_addresses(
+				   mac VARCHAR(8) PRIMARY KEY,
+				   vlan VARCHAR(50),
+				   interface VARCHAR(20),
+				   name VARCHAR(200),
+				   time VARCHAR(5),
+				   data VARCHAR(100)
+				   )
+				   ''')
 
-cursor.execute('''
-			CREATE TABLE IF NOT EXISTS mac_addresses(
-			   mac VARCHAR(8) PRIMARY KEY,
-			   vlan VARCHAR(50),
-			   interface VARCHAR(20),
-			   name VARCHAR(200),
-			   time VARCHAR(5),
-			   data VARCHAR(100)
-			   )
-			   ''')
+	cursor.execute("SELECT name FROM names")
+	names = {row[0] for row in cursor.fetchall()}
+	for x in p.glob('*.txt'):
 
-cursor.execute("SELECT name FROM names")
-names = {row[0] for row in cursor.fetchall()}
-for x in p.glob('*.txt'):
+		if str(x) in names:
+			print(x)
+			continue
+		else:
+			print (23242, x)
+			time = re.search(r'_\d\d\-\d\d',str(x))
+			time = str(time[0])[1:]
+			diki = fileDB(x, time)
 
-	if str(x) in names:
-		print(x)
-		continue
-	else:
-		print (23242, x)
-		time = re.search(r'_\d\d\-\d\d',str(x))
-		time = str(time[0])[1:]
-		diki = fileDB(x, time)
+			cursor.execute("INSERT INTO names(name) VALUES (?)", (str(x),))
+		
+	if diki:
 
-		cursor.execute("INSERT INTO names(name) VALUES (?)", (str(x),))
+		macs = list(diki.keys())
+		for i in range(0, len(macs), 900):
+			part_macs = ",".join('?'* len(macs[i:i+900]))
+			
+			cursor.execute(f"SELECT mac, interface, data FROM mac_addresses WHERE mac IN ({part_macs})", macs[i:i+900])
+			
+			for row in cursor.fetchall():
+				db_mac, db_interface, db_data = row
+				
+				all_dates = list(set(diki[db_mac][-1].split() + db_data.split()))
+				diki[db_mac][-1] = " ".join(sorted(all_dates, reverse=True)[:10])
+				
+				all_ints = list(set(diki[db_mac][1].split() + db_interface.split()))
+				diki[db_mac][1] = " ".join(all_ints)
+
+	record = [[mac, vals[0], vals[1], vals[2], vals[3], vals[4]] for mac, vals in diki.items()]
+	query = "INSERT OR REPLACE INTO mac_addresses(mac,vlan,interface,name,time, data) VALUES (?,?, ?,?, ?, ?)"
+	cursor.executemany(query,record)
+
+	con.commit()
+	con.close()
 	
-if diki:
-
-	macs = list(diki.keys())
-	for i in range(0, len(macs), 900):
-		part_macs = ",".join('?'* len(macs[i:i+900]))
-		
-		cursor.execute(f"SELECT mac, interface, data FROM mac_addresses WHERE mac IN ({part_macs})", macs[i:i+900])
-		
-		for row in cursor.fetchall():
-			db_mac, db_interface, db_data = row
-			
-			all_dates = list(set(diki[db_mac][-1].split() + db_data.split()))
-			diki[db_mac][-1] = " ".join(sorted(all_dates, reverse=True)[:10])
-			
-			all_ints = list(set(diki[db_mac][1].split() + db_interface.split()))
-			diki[db_mac][1] = " ".join(all_ints)
-
-record = [[mac, vals[0], vals[1], vals[2], vals[3], vals[4]] for mac, vals in diki.items()]
-query = "INSERT OR REPLACE INTO mac_addresses(mac,vlan,interface,name,time, data) VALUES (?,?, ?,?, ?, ?)"
-cursor.executemany(query,record)
-
-con.commit()
-con.close()
+mac_db()
